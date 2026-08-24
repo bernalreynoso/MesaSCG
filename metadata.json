@@ -1,0 +1,6 @@
+{
+  "name": "Mesa de Ayuda SCG - Dashboard Inteligente",
+  "description": "Panel de control inteligente y auditoría para ServiceDesk Plus de la Secretaría de la Contraloría General (SCG)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
