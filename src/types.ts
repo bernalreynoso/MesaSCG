@@ -95,6 +95,7 @@ export interface AuditError {
 
 export type ViewType =
   | 'dashboard_general'
+  | 'tickets_pendientes'
   | 'auditoria_catalogo'
   | 'calidad_tiempos'
   | 'control_soporte'

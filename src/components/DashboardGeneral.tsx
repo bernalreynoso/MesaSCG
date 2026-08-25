@@ -49,6 +49,7 @@ interface DashboardGeneralProps {
   tickets: Ticket[];
   onSelectTicket: (ticket: Ticket) => void;
   onLoadDemoData?: () => void;
+  onNavigateToPendientes?: () => void;
 }
 
 // Helper parser for date strings
@@ -70,6 +71,7 @@ export const DashboardGeneral: React.FC<DashboardGeneralProps> = ({
   tickets,
   onSelectTicket,
   onLoadDemoData,
+  onNavigateToPendientes,
 }) => {
   const { tecnicos } = useTecnicosCatalogo();
 
@@ -582,20 +584,34 @@ export const DashboardGeneral: React.FC<DashboardGeneralProps> = ({
         </div>
 
         {/* Tickets Abiertos */}
-        <div className="bg-white border border-slate-200/80 border-l-4 border-l-amber-500 p-4 rounded-2xl shadow-xs flex items-center justify-between">
+        <div
+          onClick={() => {
+            if (onNavigateToPendientes) {
+              onNavigateToPendientes();
+            } else {
+              setEstadoFiltro(estadoFiltro === 'ABIERTOS' ? 'TODOS' : 'ABIERTOS');
+            }
+          }}
+          className="bg-white border border-slate-200/80 border-l-4 border-l-amber-500 p-4 rounded-2xl shadow-xs flex items-center justify-between cursor-pointer hover:border-amber-400 transition-all hover:shadow-md group"
+        >
           <div>
-            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
-              Tickets Abiertos
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+                Tickets Abiertos
+              </p>
+              <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded group-hover:bg-amber-200 transition-colors">
+                Ver Global →
+              </span>
+            </div>
             <h3 className="text-2xl font-extrabold text-slate-900 mt-0.5">
               {ticketsAbiertos.length}
             </h3>
             <p className="text-[10px] text-amber-600 mt-1 font-semibold flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block animate-pulse"></span>
-              En atención activa
+              En atención activa (Clic para ver todos)
             </p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 group-hover:bg-amber-100 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 transition-colors">
             <Clock className="w-5 h-5" />
           </div>
         </div>

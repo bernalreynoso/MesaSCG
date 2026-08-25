@@ -2,6 +2,8 @@ import { Ticket } from '../types';
 import { normalizarTexto } from './technicianDetector';
 import { EstadoCanonico, EvaluacionEstadoTicket } from './statusTypes';
 
+export type { EstadoCanonico, EvaluacionEstadoTicket };
+
 // ==========================================
 // REGLAS Y PATRONES DE ESTADOS REALES (ServiceDesk Plus SCG)
 // ==========================================

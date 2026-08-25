@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard,
+  Clock,
   Boxes,
   ShieldAlert,
   UserCheck,
@@ -16,6 +17,7 @@ interface SidebarProps {
   onSelectView: (view: ViewType) => void;
   counts: {
     total: number;
+    pending: number;
     overdue: number;
     unassigned: number;
     qualityErrors: number;
@@ -34,6 +36,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: LayoutDashboard,
       badge: counts.total ? `${counts.total}` : undefined,
       badgeColor: 'bg-indigo-100 text-indigo-800 font-bold',
+    },
+    {
+      id: 'tickets_pendientes' as ViewType,
+      label: 'Tickets Pendientes Globales',
+      icon: Clock,
+      badge: counts.pending ? `${counts.pending}` : undefined,
+      badgeColor: 'bg-amber-100 text-amber-900 border border-amber-200 font-bold',
     },
     {
       id: 'auditoria_catalogo' as ViewType,

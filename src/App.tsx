@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardGeneral } from './components/DashboardGeneral';
+import { DashboardTicketsPendientes } from './components/DashboardTicketsPendientes';
 import { AuditoriaCatalogo } from './components/AuditoriaCatalogo';
 import { ModuloCalidad } from './components/ModuloCalidad';
 import { DashboardSoporte } from './components/DashboardSoporte';
@@ -17,6 +18,7 @@ import { Ticket, ColumnMapping, ViewType } from './types';
 import { MOCK_TICKETS } from './data/mockData';
 import { autoDetectMapping, parseRowsToTickets } from './utils/columnMapper';
 import { isTicketOverdue } from './utils/businessDays';
+import { esTicketAbiertoOperativo } from './utils/statusClassifier';
 import { BUZONES_PERMITIDOS, TECNICOS_SOPORTE_PROHIBIDOS_SISTEMAS } from './data/catalogs';
 
 export default function App() {
@@ -83,6 +85,7 @@ export default function App() {
   // Compute Badge Counters
   const counts = useMemo(() => {
     const overdue = tickets.filter((t) => isTicketOverdue(t.fechaCreacion, t.estado, 5)).length;
+    const pending = tickets.filter((t) => esTicketAbiertoOperativo(t.estado)).length;
     const unassigned = tickets.filter((t) => {
       const tec = String(t.tecnicoAsignado || '').toLowerCase().trim();
       return !tec || tec === 'sin asignar' || tec === 'no asignado' || tec === 'none' || tec === 'nan';
@@ -134,6 +137,7 @@ export default function App() {
 
     return {
       total: tickets.length,
+      pending,
       overdue,
       unassigned,
       qualityErrors,
@@ -183,6 +187,15 @@ export default function App() {
         <main className="flex-1 p-4 lg:p-8 min-w-0">
           {currentView === 'dashboard_general' && (
             <DashboardGeneral
+              tickets={tickets}
+              onSelectTicket={(t) => setSelectedTicket(t)}
+              onLoadDemoData={handleLoadDemoData}
+              onNavigateToPendientes={() => setCurrentView('tickets_pendientes')}
+            />
+          )}
+
+          {currentView === 'tickets_pendientes' && (
+            <DashboardTicketsPendientes
               tickets={tickets}
               onSelectTicket={(t) => setSelectedTicket(t)}
               onLoadDemoData={handleLoadDemoData}
