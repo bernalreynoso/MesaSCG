@@ -49,6 +49,7 @@ import {
 } from '../utils/statusClassifier';
 import { calculateBusinessDays, isTicketOverdue } from '../utils/businessDays';
 import { normalizarTexto } from '../utils/technicianDetector';
+import { coincideTicketConBusqueda } from '../utils/ticketSearch';
 
 interface DashboardTicketsPendientesProps {
   tickets: Ticket[];
@@ -248,20 +249,10 @@ export const DashboardTicketsPendientes: React.FC<DashboardTicketsPendientesProp
         if (!tipoSol.includes('capacita') && !normalizarTexto(ticket.categoria).includes('capacita')) return false;
       }
 
-      // Filtro de Búsqueda de Texto
+      // Filtro de Búsqueda de Texto Universal (Asunto, Descripción, Folio, Solicitante, etc.)
       if (searchTerm.trim()) {
-        const term = normalizarTexto(searchTerm);
-        const match =
-          normalizarTexto(ticket.id).includes(term) ||
-          normalizarTexto(ticket.asunto).includes(term) ||
-          normalizarTexto(ticket.solicitante).includes(term) ||
-          normalizarTexto(ticket.articulo).includes(term) ||
-          normalizarTexto(ticket.categoria).includes(term) ||
-          normalizarTexto(ticket.estado).includes(term) ||
-          normalizarTexto(responsablePrincipal).includes(term) ||
-          normalizarTexto(ticket.tecnicoAsignado).includes(term);
-
-        if (!match) return false;
+        const matchResult = coincideTicketConBusqueda(ticket, searchTerm);
+        if (!matchResult.coincide) return false;
       }
 
       return true;
@@ -876,7 +867,7 @@ export const DashboardTicketsPendientes: React.FC<DashboardTicketsPendientesProp
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="ID, Asunto, Solicitante..."
+                placeholder="Buscar por asunto, descripción, folio, solicitante..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/50"
@@ -1143,6 +1134,18 @@ export const DashboardTicketsPendientes: React.FC<DashboardTicketsPendientesProp
                               </span>
                             )}
                           </div>
+                          {searchTerm.trim() && (() => {
+                            const matchInfo = coincideTicketConBusqueda(ticket, searchTerm);
+                            if (matchInfo.fragmentoCoincidencia && matchInfo.fragmentoCoincidencia.campo !== 'Asunto') {
+                              return (
+                                <div className="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 italic line-clamp-1 mt-0.5" title={matchInfo.fragmentoCoincidencia.texto}>
+                                  <span className="font-bold not-italic mr-1">{matchInfo.fragmentoCoincidencia.campo}:</span>
+                                  &ldquo;{matchInfo.fragmentoCoincidencia.texto}&rdquo;
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </td>
 

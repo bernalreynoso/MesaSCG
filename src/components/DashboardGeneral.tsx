@@ -21,6 +21,8 @@ import {
   Wrench,
   Filter,
   Briefcase,
+  Sparkles,
+  ExternalLink,
 } from 'lucide-react';
 import {
   BarChart,
@@ -43,6 +45,7 @@ import { useTecnicosCatalogo } from '../utils/technicianCatalogStore';
 import { clasificarTipoTrabajo } from '../utils/workTypeClassifier';
 import { determinarAtribucionOperativa } from '../utils/operationalAttributionEngine';
 import { normalizarTexto } from '../utils/technicianDetector';
+import { coincideTicketConBusqueda } from '../utils/ticketSearch';
 import { EmptyState } from './EmptyState';
 
 interface DashboardGeneralProps {
@@ -82,6 +85,7 @@ export const DashboardGeneral: React.FC<DashboardGeneralProps> = ({
   const [tipoTrabajoFiltro, setTipoTrabajoFiltro] = useState<'TODOS' | 'DICTAMEN' | 'ESTANDAR'>('TODOS');
   const [tecnicoFiltro, setTecnicoFiltro] = useState<string>('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
+  const [limiteResultadosBusqueda, setLimiteResultadosBusqueda] = useState<number>(10);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -181,22 +185,10 @@ export const DashboardGeneral: React.FC<DashboardGeneralProps> = ({
         if (!coincide) return false;
       }
 
-      // Filtro de Búsqueda
+      // Filtro de Búsqueda Universal (Asunto, Descripción, Folio, Solicitante, Resolución, etc.)
       if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase().trim();
-        const atribucion = determinarAtribucionOperativa(t);
-        const nombresResp = atribucion.nombresResponsables.join(' ').toLowerCase();
-        const match =
-          t.id.toLowerCase().includes(q) ||
-          (t.solicitante || '').toLowerCase().includes(q) ||
-          (t.categoria || '').toLowerCase().includes(q) ||
-          (t.articulo || '').toLowerCase().includes(q) ||
-          (t.asunto || '').toLowerCase().includes(q) ||
-          (t.estado || '').toLowerCase().includes(q) ||
-          (t.tecnicoAsignado || '').toLowerCase().includes(q) ||
-          (t.tipoSolicitud || '').toLowerCase().includes(q) ||
-          nombresResp.includes(q);
-        if (!match) return false;
+        const resultadoBusqueda = coincideTicketConBusqueda(t, searchTerm);
+        if (!resultadoBusqueda.coincide) return false;
       }
 
       return true;
@@ -685,26 +677,217 @@ export const DashboardGeneral: React.FC<DashboardGeneralProps> = ({
       </div>
 
       {/* Buscador Rápido de Tickets */}
-      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs">
+      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs space-y-3">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscador por Folio ID, solicitante, categoría, artículo, asunto o técnico..."
-            className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl pl-11 pr-4 py-2.5 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400"
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setLimiteResultadosBusqueda(10);
+            }}
+            placeholder="Buscar por asunto, descripción, folio, solicitante, resolución o cualquier palabra clave..."
+            className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl pl-11 pr-24 py-2.5 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-medium"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600 hover:text-slate-900 bg-slate-200 px-2 py-1 rounded-lg font-medium cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600 hover:text-slate-900 bg-slate-200 hover:bg-slate-300 px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-colors"
             >
               Limpiar
             </button>
           )}
         </div>
+
+        {/* Guía contextual y resumen de búsqueda */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500 px-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-semibold text-slate-700 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500 inline" />
+              Búsqueda universal activa:
+            </span>
+            <span className="text-slate-600 font-medium">asunto</span>
+            <span>•</span>
+            <span className="text-indigo-950 font-bold bg-indigo-50/80 px-1 rounded">descripción</span>
+            <span>•</span>
+            <span className="text-slate-600">folio</span>
+            <span>•</span>
+            <span className="text-slate-600">solicitante</span>
+            <span>•</span>
+            <span className="text-slate-600">resolución</span>
+            <span>•</span>
+            <span className="text-slate-600">conversaciones y campos adicionales</span>
+          </div>
+          {searchTerm.trim() && (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full text-xs">
+                {filteredTickets.length} {filteredTickets.length === 1 ? 'coincidencia' : 'coincidencias'}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* RESULTADOS DIRECTOS DE BÚSQUEDA (Visible cuando el usuario escribe en el buscador) */}
+      {searchTerm.trim() && (
+        <div className="bg-white border border-indigo-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <Search className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>Resultados para la búsqueda:</span>
+                  <span className="text-indigo-600 font-extrabold">&ldquo;{searchTerm}&rdquo;</span>
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Mostrando {Math.min(filteredTickets.length, limiteResultadosBusqueda)} de {filteredTickets.length} solicitudes encontradas. Haz clic en cualquier ticket para ver su detalle completo.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setSearchTerm('')}
+                className="text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg font-semibold cursor-pointer transition-colors"
+              >
+                Cerrar resultados
+              </button>
+            </div>
+          </div>
+
+          {filteredTickets.length === 0 ? (
+            <div className="py-8 text-center bg-slate-50/70 border border-dashed border-slate-200 rounded-xl">
+              <p className="text-sm font-semibold text-slate-700">
+                No se encontraron tickets que contengan &ldquo;{searchTerm}&rdquo;
+              </p>
+              <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                No hubo coincidencias en asunto, descripción, resolución ni otros campos con los filtros seleccionados.
+              </p>
+              <button
+                onClick={() => setSearchTerm('')}
+                className="mt-3 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 cursor-pointer transition-colors inline-flex items-center gap-1.5"
+              >
+                Limpiar búsqueda
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {filteredTickets.slice(0, limiteResultadosBusqueda).map((t) => {
+                const infoBusqueda = coincideTicketConBusqueda(t, searchTerm);
+                const est = evaluarEstado(t.estado);
+                const areaTicket = determinarAreaDeTicket(t);
+                const clasif = clasificarTipoTrabajo(t);
+                const atribucion = determinarAtribucionOperativa(t);
+                const tecPrincipal = atribucion.nombresResponsables[0] || t.tecnicoAsignado || 'Sin Asignar';
+
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => onSelectTicket(t)}
+                    className="p-3.5 bg-slate-50/70 hover:bg-indigo-50/40 border border-slate-200/80 hover:border-indigo-300 rounded-xl cursor-pointer transition-all space-y-2 group"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded text-xs border border-slate-200 group-hover:border-indigo-300">
+                          #{t.id}
+                        </span>
+                        <span className="font-bold text-slate-900 text-sm group-hover:text-indigo-900">
+                          {t.asunto || t.articulo || 'Sin Asunto'}
+                        </span>
+                        {clasif.esDictamenNoUtilidad && (
+                          <span className="text-[10px] font-extrabold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+                            Dictamen
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 self-start sm:self-center shrink-0">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200">
+                          {areaTicket}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            est.esCerrado
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : est.esCancelado
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : est.esEnEspera
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-sky-100 text-sky-800 border border-sky-200'
+                          }`}
+                        >
+                          {t.estado}
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors ml-1" />
+                      </div>
+                    </div>
+
+                    {/* Metadatos del ticket */}
+                    <div className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+                      <span>Solicitante: <strong className="text-slate-700">{t.solicitante || 'No registrado'}</strong></span>
+                      <span>•</span>
+                      <span>Técnico: <strong className="text-slate-700">{tecPrincipal}</strong></span>
+                      <span>•</span>
+                      <span>Fecha: {t.fechaCreacion || 'No registrada'}</span>
+                      {t.categoria && (
+                        <>
+                          <span>•</span>
+                          <span className="text-slate-400">Cat: {t.categoria}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Dónde coincidió la búsqueda */}
+                    {infoBusqueda.camposCoincidentes.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className="text-[10px] font-semibold text-slate-400">Coincidencia encontrada en:</span>
+                        {infoBusqueda.camposCoincidentes.map((campo) => (
+                          <span
+                            key={campo}
+                            className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
+                              campo.includes('Descripción')
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-extrabold'
+                                : campo.includes('Asunto')
+                                ? 'bg-sky-50 text-sky-700 border-sky-200 font-extrabold'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {campo}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Fragmento / Snippet de texto coincidente */}
+                    {infoBusqueda.fragmentoCoincidencia && (
+                      <div className="text-[11px] text-slate-700 bg-amber-50/60 border border-amber-200/70 rounded-lg px-3 py-1.5 mt-1 font-mono leading-relaxed">
+                        <span className="font-bold text-amber-900 mr-1.5 font-sans text-[10px] uppercase tracking-wider">
+                          Fragmento ({infoBusqueda.fragmentoCoincidencia.campo}):
+                        </span>
+                        &ldquo;{infoBusqueda.fragmentoCoincidencia.texto}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {filteredTickets.length > limiteResultadosBusqueda && (
+                <div className="pt-2 text-center">
+                  <button
+                    onClick={() => setLimiteResultadosBusqueda((prev) => prev + 15)}
+                    className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-200 transition-colors cursor-pointer"
+                  >
+                    Mostrar más resultados ({filteredTickets.length - limiteResultadosBusqueda} restantes)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* RESUMEN EJECUTIVO POR ÁREA Y DESGLOSE POR TÉCNICO (Carga Operativa) */}
       <div className="space-y-6">
